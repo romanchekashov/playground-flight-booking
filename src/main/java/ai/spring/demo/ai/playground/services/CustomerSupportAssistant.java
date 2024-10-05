@@ -18,6 +18,7 @@ package ai.spring.demo.ai.playground.services;
 
 import java.time.LocalDate;
 
+import org.springframework.ai.ollama.api.OllamaOptions;
 import reactor.core.publisher.Flux;
 
 import org.springframework.ai.chat.client.ChatClient;
@@ -27,6 +28,8 @@ import org.springframework.ai.chat.memory.ChatMemory;
 import org.springframework.ai.vectorstore.SearchRequest;
 import org.springframework.ai.vectorstore.VectorStore;
 import org.springframework.stereotype.Service;
+
+import ai.spring.demo.ai.playground.CommonProps;
 
 import static org.springframework.ai.chat.client.advisor.AbstractChatMemoryAdvisor.CHAT_MEMORY_CONVERSATION_ID_KEY;
 import static org.springframework.ai.chat.client.advisor.AbstractChatMemoryAdvisor.CHAT_MEMORY_RETRIEVE_SIZE_KEY;
@@ -39,10 +42,11 @@ public class CustomerSupportAssistant {
 
 	private final ChatClient chatClient;
 
-	public CustomerSupportAssistant(ChatClient.Builder modelBuilder, VectorStore vectorStore, ChatMemory chatMemory) {
+	public CustomerSupportAssistant(ChatClient.Builder modelBuilder, VectorStore vectorStore, ChatMemory chatMemory, CommonProps commonProps) {
 
 		// @formatter:off
 		this.chatClient = modelBuilder
+				.defaultOptions(OllamaOptions.create().withModel(commonProps.ollamaAiModel))
 				.defaultSystem("""
 						You are a customer chat support agent of an airline named "Funnair"."
 						Respond in a friendly, helpful, and joyful manner.
@@ -59,13 +63,13 @@ public class CustomerSupportAssistant {
 				.defaultAdvisors(
 						new PromptChatMemoryAdvisor(chatMemory), // Chat Memory
 						// new VectorStoreChatMemoryAdvisor(vectorStore)),
-					
+
 						new QuestionAnswerAdvisor(vectorStore, SearchRequest.defaults()), // RAG
 						// new QuestionAnswerAdvisor(vectorStore, SearchRequest.defaults()
 						// 	.withFilterExpression("'documentType' == 'terms-of-service' && region in ['EU', 'US']")),
-						
+
 						new LoggingAdvisor())
-						
+
 				.defaultFunctions("getBookingDetails", "changeBooking", "cancelBooking") // FUNCTION CALLING
 
 				.build();
@@ -73,13 +77,28 @@ public class CustomerSupportAssistant {
 	}
 
 	public Flux<String> chat(String chatId, String userMessageContent) {
+		System.out.printf("chatId = %s, userMessageContent = %s\n", chatId, userMessageContent);
 
-		return this.chatClient.prompt()
+		var response = chatClient.prompt()
 				.system(s -> s.param("current_date", LocalDate.now().toString()))
 				.user(userMessageContent)
 				.advisors(a -> a
 						.param(CHAT_MEMORY_CONVERSATION_ID_KEY, chatId)
 						.param(CHAT_MEMORY_RETRIEVE_SIZE_KEY, 100))
-				.stream().content();
+				.call()
+				.content();
+
+		Flux<String> resp = Flux.just(response);
+
+		// Flux<String> resp = this.chatClient.prompt()
+		// 		.system(s -> s.param("current_date", LocalDate.now().toString()))
+		// 		.user(userMessageContent)
+		// 		.advisors(a -> a
+		// 				.param(CHAT_MEMORY_CONVERSATION_ID_KEY, chatId)
+		// 				.param(CHAT_MEMORY_RETRIEVE_SIZE_KEY, 100))
+		// 		.stream()
+		// 		.content();
+
+		return resp;
 	}
 }

@@ -3,6 +3,7 @@ package ai.spring.demo.ai.playground.services;
 import ai.spring.demo.ai.playground.data.*;
 import ai.spring.demo.ai.playground.services.BookingTools.BookingDetails;
 
+import org.apache.commons.lang3.tuple.Pair;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
@@ -72,14 +73,16 @@ public class FlightBookingService {
         return toBookingDetails(booking);
     }
 
-    public void changeBooking(String bookingNumber, String firstName, String lastName, String newDate, String from, String to) {
+    public Pair<Void, String> changeBooking(String bookingNumber, String firstName, String lastName, String newDate, String from, String to) {
         var booking = findBooking(bookingNumber, firstName, lastName);
-        if(booking.getDate().isBefore(LocalDate.now().plusDays(1))){
-            throw new IllegalArgumentException("Booking cannot be changed within 24 hours of the start date.");
+        if (booking.getDate().isBefore(LocalDate.now().plusDays(1))) {
+//            throw new IllegalArgumentException("Booking cannot be changed within 24 hours of the start date.");
+            return Pair.of(null, "Booking cannot be changed within 24 hours of the start date.");
         }
         booking.setDate(LocalDate.parse(newDate));
         booking.setFrom(from);
         booking.setTo(to);
+        return Pair.of(null, "");
     }
 
     public void cancelBooking(String bookingNumber, String firstName, String lastName) {

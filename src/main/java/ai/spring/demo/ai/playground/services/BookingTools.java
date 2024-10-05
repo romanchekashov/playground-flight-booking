@@ -64,9 +64,9 @@ public class BookingTools {
     @Description("Change booking dates")
     public Function<ChangeBookingDatesRequest, String> changeBooking() {
         return request -> {
-            flightBookingService.changeBooking(request.bookingNumber(), request.firstName(), request.lastName(),
+            var pair = flightBookingService.changeBooking(request.bookingNumber(), request.firstName(), request.lastName(),
                     request.date(), request.from(), request.to());
-            return "";
+            return pair.getRight();
         };
     }
 
@@ -74,7 +74,12 @@ public class BookingTools {
     @Description("Cancel booking")
     public Function<CancelBookingRequest, String> cancelBooking() {
         return request -> {
-            flightBookingService.cancelBooking(request.bookingNumber(), request.firstName(), request.lastName());
+            try {
+                flightBookingService.cancelBooking(request.bookingNumber(), request.firstName(), request.lastName());
+            } catch (IllegalArgumentException e) {
+                e.printStackTrace();
+                return e.getMessage();
+            }
             return "";
         };
     }
