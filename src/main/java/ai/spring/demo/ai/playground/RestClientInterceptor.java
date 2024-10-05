@@ -81,7 +81,7 @@ public class RestClientInterceptor implements ClientHttpRequestInterceptor {
     static void logResponse (ClientHttpResponse response) throws IOException {
         System.out.printf("Response: %s %s%n", response.getStatusCode(), response.getStatusText());
         System.out.printf("Headers: %s%n", response.getHeaders());
-        System.out.printf("Body: %s%n", IOUtils.toString(response.getBody(), StandardCharsets.UTF_8));
+        System.out.printf("Body: %s%n", IOUtils.toString(response.getBody(), StandardCharsets.UTF_8).length());
         System.out.println();
     }
 }

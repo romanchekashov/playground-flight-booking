@@ -17,7 +17,9 @@
 package ai.spring.demo.ai.playground.services;
 
 import java.time.LocalDate;
+import java.util.concurrent.atomic.AtomicReference;
 
+import ai.spring.demo.ai.playground.MeasurePerformance;
 import org.springframework.ai.ollama.api.OllamaOptions;
 import reactor.core.publisher.Flux;
 
@@ -79,16 +81,25 @@ public class CustomerSupportAssistant {
 	public Flux<String> chat(String chatId, String userMessageContent) {
 		System.out.printf("chatId = %s, userMessageContent = %s\n", chatId, userMessageContent);
 
-		var response = chatClient.prompt()
-				.system(s -> s.param("current_date", LocalDate.now().toString()))
-				.user(userMessageContent)
-				.advisors(a -> a
-						.param(CHAT_MEMORY_CONVERSATION_ID_KEY, chatId)
-						.param(CHAT_MEMORY_RETRIEVE_SIZE_KEY, 100))
-				.call()
-				.content();
+		AtomicReference<String> response = new AtomicReference<>();
 
-		Flux<String> resp = Flux.just(response);
+		MeasurePerformance.measure(() -> {
+			try {
+				response.set(chatClient.prompt()
+						.system(s -> s.param("current_date", LocalDate.now().toString()))
+						.user(userMessageContent)
+						.advisors(a -> a
+								.param(CHAT_MEMORY_CONVERSATION_ID_KEY, chatId)
+								.param(CHAT_MEMORY_RETRIEVE_SIZE_KEY, 100))
+						.call()
+						.content());
+			} catch (IllegalStateException e) {
+				System.out.println("Exception: " + e.getMessage());
+				response.set("I'm afraid. I can't answer this question.");
+			}
+		});
+
+		Flux<String> resp = Flux.just(response.get());
 
 		// Flux<String> resp = this.chatClient.prompt()
 		// 		.system(s -> s.param("current_date", LocalDate.now().toString()))
